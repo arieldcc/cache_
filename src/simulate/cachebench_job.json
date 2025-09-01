@@ -1,0 +1,7 @@
+{
+  "name": "HyLIGHT-Cachebench-Job",
+  "trace_file": "PATH/TO/trace.bin",
+  "cache_size": "128MB",
+  "engine": "lru",
+  "stats_interval_sec": 5
+}

@@ -1,0 +1,8 @@
+//siapkan env:
+conda env create -f env.yml
+
+//aktivkan env:
+conda activate hylight-cache
+
+//demo end-to-end:
+bash scripts/run_pipeline.sh

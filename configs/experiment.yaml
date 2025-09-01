@@ -1,0 +1,78 @@
+# Experiment config for HyLIGHT-Cache
+dataset: movielens_1m # synthetic  # options: synthetic | lrb_wiki | twitter_kv
+input_path: data/raw/ml1m.csv # data/raw/synth_trace.csv
+features_path: data/processed/ml1m_features.csv #data/processed/synth_features.csv
+labels_path: data/labels/ml1m_labels.csv #data/labels/synth_labels.csv
+
+# Cache simulation settings
+capacity_bytes: 134217728   # 128 MB
+latency_ms:
+  hit: 5.0
+  miss: 80.0
+bandwidth_mb_per_s: 100.0   # used only for derived reporting
+
+# Admission threshold for classifier probability (>= threshold => cache)
+admission_threshold: 0.5
+
+# Train/val/test split
+split:
+  train: 0.7
+  val: 0.15
+  test: 0.15
+  random_state: 123
+
+# LR + SGD with explicit decay
+sgd_decay:
+  eta0: 0.05       # initial learning rate
+  power_t: 0.5     # decay power, eta_t = eta0 / t^power_t
+  max_iter: 100
+  alpha: 1e-4
+  class_weight: balanced
+
+# LightGBM (used if available else fallback to HistGradientBoosting)
+lightgbm:
+  n_estimators: 200
+  max_depth: -1
+  num_leaves: 31
+  learning_rate: 0.05
+
+# ELM (single hidden layer)
+elm:
+  n_hidden: 256
+  activation: relu
+  reg_lambda: 1e-2
+
+# Naive Bayes
+naive_bayes:
+  type: gaussian
+
+# Ensemble weights (soft voting)
+ensemble_weights:
+  lightgbm: 1.0
+  naive_bayes: 0.7
+  elm: 1.0
+
+
+features:
+  extra_numeric: [rating, n_genres]
+  extra_categorical: [gender, age, occupation, primary_genre]
+  categorical_top_k: 30   # genre/occupation/gender teratas
+  log_size: true
+  use_recency: true
+  use_freq: true
+  hour_from_ts: true
+  use_ttl: true
+
+
+tuning:
+  thresholds: [0.5, 0.6, 0.7, 0.8, 0.85, 0.9]
+  ensemble_types: [soft, hard, stacking, gating]
+  soft_weight_grid:
+    gbdt: [0.5, 1.0, 1.5, 2.0]
+    nb:   [0.5, 1.0, 1.5]
+    elm:  [0.5, 1.0, 1.5, 2.0]
+  objective: byte_hit_rate   # bisa: hit_rate atau avg_latency_ms (akan diminimasi)
+  size_aware:
+    alpha: [0.0, 0.2, 0.5]   # threshold efektif = τ + α * norm_log_size
+  calibrate:
+    enabled: true            # Platt scaling per base model

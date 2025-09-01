@@ -1,0 +1,8 @@
+numpy
+pandas
+scikit-learn>=1.2
+lightgbm; platform_system != "Windows" or platform_machine != "arm64"
+pyyaml
+tqdm
+matplotlib
+joblib
