@@ -9,7 +9,9 @@ def main():
     if args.decision_col not in df.columns:
         raise ValueError(f"Column {args.decision_col} not found. Available: {list(df.columns)}")
     out = df[['ts','key', args.decision_col]].rename(columns={args.decision_col:'label'})
-    out.to_csv(args.out, index=False)
-    print(f"Wrote labels from libCacheSim export: {args.out} rows={len(out)}")
+    import os
+    os.makedirs(os.path.dirname(args.out_path) or '.', exist_ok=True)
+    out.to_csv(args.out_path, index=False)
+    print(f"Wrote labels from libCacheSim export: {args.out_path} rows={len(out)}")
 if __name__ == '__main__':
     main()

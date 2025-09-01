@@ -8,10 +8,37 @@ def load_cfg(cfg_path):
         return yaml.safe_load(f)
 
 def split_data(df_feat, df_lbl, split_cfg, feature_cols):
+    """Chronological split by time column (default: 'ts') to avoid temporal leakage.
+    Expects df_feat to contain BASE_COLS + feature_cols, df_lbl to contain ['row_id','label'].
+    split_cfg keys: train, val, test (fractions); random_state (ignored), time_col (optional).
+    """
     df = df_feat.merge(df_lbl, on=['row_id'], how='inner').dropna()
-    df = df.sample(frac=1.0, random_state=split_cfg.get('random_state', 123)).reset_index(drop=True)
-    n = len(df); n_train = int(split_cfg['train']*n); n_val = int(split_cfg['val']*n)
-    parts = {'train': df.iloc[:n_train], 'val': df.iloc[n_train:n_train+n_val], 'test': df.iloc[n_train+n_val:]}
+    time_col = split_cfg.get('time_col', 'ts')
+    if time_col not in df.columns:
+        raise ValueError(f"Time column '{time_col}' not found. Available: {list(df.columns)}")
+    # stable sort to preserve order for equal timestamps
+    df = df.sort_values(time_col, kind='mergesort').reset_index(drop=True)
+    n = len(df)
+    train_frac = float(split_cfg.get('train', 0.7))
+    val_frac   = float(split_cfg.get('val',   0.15))
+    test_frac  = float(split_cfg.get('test',  1.0 - train_frac - val_frac))
+    if abs(train_frac + val_frac + test_frac - 1.0) > 1e-6:
+        # normalize fractions
+        s = train_frac + val_frac + test_frac
+        train_frac, val_frac, test_frac = train_frac/s, val_frac/s, test_frac/s
+    n_train = int(train_frac*n); n_val = int(val_frac*n)
+    parts = {
+        'train': df.iloc[:n_train],
+        'val'  : df.iloc[n_train:n_train+n_val],
+        'test' : df.iloc[n_train+n_val:]
+    }
+    out={}
+    for name, part in parts.items():
+        X = part[feature_cols].to_numpy()
+        y = part['label'].to_numpy().astype(int)
+        meta = part[BASE_COLS].copy()
+        out[name] = (X, y, meta)
+    return out
     out={}
     for name, part in parts.items():
         X = part[feature_cols].values
